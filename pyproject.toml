@@ -1,0 +1,39 @@
+[project]
+name = "transpose"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "AlexBeattie42", email = "30098201+alexbeattie42@users.noreply.github.com" },
+]
+requires-python = ">=3.10"
+dependencies = [
+    "torch",
+    "chumpy",
+    "vctoolkit",
+    "open3d",
+]
+
+[project.scripts]
+transpose = "transpose:main"
+
+[tool.uv.extra-build-dependencies]
+chumpy = ["pip"]
+
+[tool.uv.sources]
+torch = [
+  { index = "pytorch-cu130", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
+]
+torchvision = [
+  { index = "pytorch-cu130", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
+]
+
+[[tool.uv.index]]
+name = "pytorch-cu130"
+url = "https://download.pytorch.org/whl/cu130"
+explicit = true
+
+
+[build-system]
+requires = ["uv_build>=0.12.5,<0.13.0"]
+build-backend = "uv_build"
