@@ -118,3 +118,20 @@ ln -s ~/data/DIP/TotalCapture_Real_60FPS/* ./data/dataset_raw/TotalCapture/DIP_r
 ln -s ~/data/TotalCapture/vicon_groundtruth/* ./data/dataset_raw/TotalCapture/official
 ln -s ~/smpl/SMPL_python_v.1.0.0/smpl/models/basicmodel_m_lbs_10_207_0_v1.0.0.pkl ./models/SMPL_male.pkl
 ```
+
+## Docker
+
+```bash
+docker build -t transpose .
+docker run --gpus all --rm -it \
+    -e DISPLAY=$DISPLAY \
+    -e QT_X11_NO_MITSHM=1 \
+    -e LIBGL_ALWAYS_SOFTWARE=1 \
+    -e XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR \
+    -v $XDG_RUNTIME_DIR:$XDG_RUNTIME_DIR \
+    -v /tmp/.X11-unix:/tmp/.X11-unix:rw \
+    -v ".:/app" \
+    -v "$HOME/data:$HOME/data" \
+    -v "$HOME/smpl:$HOME/smpl" \
+    transpose
+```
