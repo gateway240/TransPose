@@ -106,3 +106,15 @@ If you find the project helpful, please consider citing us:
 } 
 ```
 
+## Symlinks
+
+```bash
+mkdir -p ./data/dataset_raw/DIP_IMU
+mkdir -p ./data/dataset_raw/TotalCapture/DIP_recalculate
+mkdir -p ./data/dataset_raw/TotalCapture/official
+mkdir -p ./models
+ln -s ~/data/DIP/DIP_IMU_and_Others/DIP_IMU/* ./data/dataset_raw/DIP_IMU
+ln -s ~/data/DIP/TotalCapture_Real_60FPS/* ./data/dataset_raw/TotalCapture/DIP_recalculate
+ln -s ~/data/TotalCapture/vicon_groundtruth/* ./data/dataset_raw/TotalCapture/official
+ln -s ~/smpl/SMPL_python_v.1.0.0/smpl/models/basicmodel_m_lbs_10_207_0_v1.0.0.pkl ./models/SMPL_male.pkl
+```
