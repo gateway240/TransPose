@@ -123,7 +123,9 @@ ln -s ~/smpl/SMPL_python_v.1.0.0/smpl/models/basicmodel_m_lbs_10_207_0_v1.0.0.pk
 
 ```bash
 docker build -t transpose .
+xhost +local:
 docker run --gpus all --rm -it \
+    --user $(id -u):$(id -g) \
     -e DISPLAY=$DISPLAY \
     -e QT_X11_NO_MITSHM=1 \
     -e LIBGL_ALWAYS_SOFTWARE=1 \

@@ -64,7 +64,7 @@ class SMPLJoint(enum.Enum):
     RHAND = 23
 
 
-class SMPLHJoint(enum.Enum):
+class SMPLHJoint(enum.IntEnum):
     r"""
     Prefix L = left; Prefix R = right.
     W = wrist; I = index; M = middle; L = little; R = ring; T = thumb.

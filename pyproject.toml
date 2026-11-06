@@ -13,6 +13,7 @@ dependencies = [
     "numpy<1.24",
     "vctoolkit",
     "open3d",
+    "scipy>=1.15.3",
 ]
 
 [project.scripts]
