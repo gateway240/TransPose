@@ -1,0 +1,7 @@
+sensor,+x,-x ,+y,-y,+z,-z
+left arm,palm rot back,palm rot forward,arm back,arm forward,arm up,arm down
+right arm,palm rot back,palm rot forward,arm forward,arm back,arm down,arm up
+left leg,knee back,knee forward,knee out rot,knee in rot,leg outside,leg inside
+right leg,knee back,knee forward,knee in rot,knee out rot,leg inside,leg outside
+head,head down,head up,head rot left,head rot right,head right side,head left side
+pelvis,forward,backward,rot left,rot right,side right,side left
