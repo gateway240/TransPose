@@ -348,13 +348,13 @@ def normalize_imu_data(
 
     return a_norm, R_norm
 
-motion = "squats_deep"
-frame_start = 0
-frame_end = 400
+# motion = "squats_deep"
+# frame_start = 0
+# frame_end = 400
 
-# motion = "walking"
-# frame_start = 500
-# frame_end = 1200
+motion = "walking"
+frame_start = 500
+frame_end = 800
 
 # motion = "jogging"
 # frame_start = 100
@@ -503,16 +503,16 @@ def main() -> None:
     print(acc[0])
     print(acc.shape)
     ori = torch.load(os.path.join(paths.example_dir, f"{motion}_orientations.pt"))
-    # angle, C_heading = compute_heading_correction(
-    #     ori,
-    #     base_sensor=PELVIS_IDX,
-    # )
+    angle, C_heading = compute_heading_correction(
+        ori,
+        base_sensor=PELVIS_IDX,
+    )
 
-    # print("Heading correction:", torch.rad2deg(angle).item())
-    # print("Correction matrix:", C_heading)
+    print("Heading correction:", torch.rad2deg(angle).item())
+    print("Correction matrix:", C_heading)
 
-    # # Apply global heading correction to all IMU orientations.
-    # ori = C_heading @ ori
+    # Apply global heading correction to all IMU orientations.
+    ori = C_heading @ ori
     print(ori[0])
     print(ori.shape)
     parent = [
@@ -553,23 +553,7 @@ def main() -> None:
     print(pose.shape, tran_0.shape)
     global_rotations = art.math.spatial.forward_kinematics_R(pose, parent)
     print(global_rotations)
-    for joint in [
-        SMPLJoint.LELBOW,
-        SMPLJoint.RELBOW,
-        SMPLJoint.LWRIST,
-        SMPLJoint.RWRIST,
-    ]:
-        print(
-            joint,
-            "local:",
-            Rotation.from_matrix(
-                pose[0, joint].numpy()
-            ).as_euler("xyz", degrees=True),
-            "global:",
-            Rotation.from_matrix(
-                global_rotations[0, joint].numpy()
-            ).as_euler("xyz", degrees=True),
-        )
+
     candidates = generate_coordinate_frame_candidates()
     R_vis = torch.tensor(
         Rotation.from_euler(
@@ -589,15 +573,15 @@ def main() -> None:
     #     #
     #     # Apply candidate transform to experimental IMU data
     #     #
-    #     # ori_test = ori @ R_fix
-    #     # acc_test = acc @ R_fix
-    #     ori_test = ori
-    #     acc_test = acc
+    #     ori_test = ori @ R_fix
+    #     acc_test = acc @ R_fix
+    #     # ori_test = ori
+    #     # acc_test = acc
     #     #
     #     # Recompute calibration in transformed frame
     #     #
-    #     # P_IM_test = ori_test[0, PELVIS_IDX]
-    #     P_IM_test = R_fix
+    #     P_IM_test = ori_test[0, PELVIS_IDX]
+    #     # P_IM_test = R_fix
     #     R_I_offset, a_m = calibrate_rotations(
     #         ori_test,
     #         acc_test,
@@ -694,6 +678,11 @@ def main() -> None:
     #     ],
     #     dtype=torch.float32,
     # )
+    R_fix = torch.tensor([
+    [-1, 0, 0],
+    [ 0, 0, 1],
+    [ 0, 1, 0],
+], dtype=torch.float32)
     # R_fix = torch.tensor(
     #     [
     #         [0, 1, 0],
@@ -710,10 +699,10 @@ def main() -> None:
 #     ],
 #     dtype=torch.float32,
 # )
-    # ori = ori @ R_fix
-    # acc = acc @ R_fix
+    ori = ori @ R_fix
+    acc = acc @ R_fix
 
-    # P_IM = ori[0, PELVIS_IDX]
+    P_IM = ori[0, PELVIS_IDX]
 #     P_IM = torch.tensor(
 #     [
 #         [0, 0, 1],
@@ -732,11 +721,11 @@ def main() -> None:
 #     [ 1,  0,  0],
 #     [ 0, -1,  0],
     # ], dtype=torch.float32)
-    P_IM = torch.tensor([
-        [ 0,  0, -1],
-        [ 0, -1,  0],
-        [-1,  0,  0],
-    ], dtype=torch.float32)
+    # P_IM = torch.tensor([
+    #     [ 0,  0, -1],
+    #     [ 0, -1,  0],
+    #     [-1,  0,  0],
+    # ], dtype=torch.float32)
     print("P_IM:")
     print(P_IM)
 
@@ -757,47 +746,19 @@ def main() -> None:
     )
     print("a_m", a_m)
     a_norm, R_norm = normalize_imu_data(ori, acc, R_I_offset, a_m, P_IM, PELVIS_IDX)
-    for i in range(6):
-        euler = Rotation.from_matrix(
-            R_norm[0, i].cpu().numpy()
-        ).as_euler("xyz", degrees=True)
-
-        print(f"IMU {i}: {euler}")
-    R_expected = global_rotations[0, tracked_joints]
-
-    R_root = R_expected[PELVIS_IDX]
-
-    R_expected_relative = (
-        R_root.T.unsqueeze(0) @ R_expected
-    )
-
-    print("Expected relative orientations:")
-    print(R_expected_relative)
-
-    print("Actual normalized orientations:")
-    print(R_norm[0])
-
-    for joint in [
-        SMPLJoint.LELBOW,
-        SMPLJoint.RELBOW,
-        SMPLJoint.LWRIST,
-        SMPLJoint.RWRIST,
-    ]:
-        R = global_rotations[0, joint]
-
-        euler = Rotation.from_matrix(
-            R.cpu().numpy()
-        ).as_euler("xyz", degrees=True)
-
-        print(joint, euler)
     a_test = torch.zeros_like(a_norm)
     x = normalize_and_concat(
         a_norm[frame_start:frame_end], R_norm[frame_start:frame_end]
     ).to(device)
     pose, tran = net.forward_offline(x)
     pose_vis = pose.clone()
+    tran_vis = tran.clone()
     pose_vis[:, 0] = R_vis @ pose_vis[:, 0]
-    art.ParametricModel(paths.smpl_file).view_motion([pose_vis], [tran])
+    tran_vis = (
+        R_vis
+        @ tran_vis.unsqueeze(-1)
+    ).squeeze(-1)
+    art.ParametricModel(paths.smpl_file).view_motion([pose_vis], [tran_vis])
     # Visualize calibration pose
     # pose = make_calibration_pose(1000)
     # pose_vis = pose.clone()
