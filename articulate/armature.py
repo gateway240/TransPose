@@ -32,7 +32,7 @@ class MANOJoint(enum.Enum):
     T2 = 15
 
 
-class SMPLJoint(enum.Enum):
+class SMPLJoint(enum.IntEnum):
     r"""
     Prefix L = left; Prefix R = right.
     """
