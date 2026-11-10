@@ -454,49 +454,49 @@ def main() -> None:
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     net = TransPoseNet().to(device)
 
-    acc = torch.load(os.path.join(paths.example_dir, f"{motion}_accelerations.pt"))
+    # acc = torch.load(os.path.join(paths.example_dir, f"{motion}_accelerations.pt"))
     # acc = torch.load(os.path.join(paths.example_dir, f'acc.pt'))
-    print(acc[0])
-    print(acc.shape)
-    ori = torch.load(os.path.join(paths.example_dir, f"{motion}_orientations.pt"))
-    angle, C_heading = compute_heading_correction(
-        ori,
-        base_sensor=PELVIS_IDX,
-    )
+    # print(acc[0])
+    # print(acc.shape)
+    # ori = torch.load(os.path.join(paths.example_dir, f"{motion}_orientations.pt"))
+    # angle, C_heading = compute_heading_correction(
+    #     ori,
+    #     base_sensor=PELVIS_IDX,
+    # )
 
-    print("Heading correction:", torch.rad2deg(angle).item())
-    print("Correction matrix:", C_heading)
+    # print("Heading correction:", torch.rad2deg(angle).item())
+    # print("Correction matrix:", C_heading)
 
-    # Apply global heading correction to all IMU orientations.
-    ori = C_heading @ ori
-    print(ori[0])
-    print(ori.shape)
-    parent = [
-        -1,
-        0,
-        0,
-        0,
-        1,
-        2,
-        3,
-        4,
-        5,
-        6,
-        7,
-        8,
-        9,
-        12,
-        12,
-        12,
-        13,
-        14,
-        16,
-        17,
-        18,
-        19,
-        20,
-        21,
-    ]
+    # # Apply global heading correction to all IMU orientations.
+    # ori = C_heading @ ori
+    # print(ori[0])
+    # print(ori.shape)
+    # parent = [
+    #     -1,
+    #     0,
+    #     0,
+    #     0,
+    #     1,
+    #     2,
+    #     3,
+    #     4,
+    #     5,
+    #     6,
+    #     7,
+    #     8,
+    #     9,
+    #     12,
+    #     12,
+    #     12,
+    #     13,
+    #     14,
+    #     16,
+    #     17,
+    #     18,
+    #     19,
+    #     20,
+    #     21,
+    # ]
     # parent = [-1 for i in range(len(parent))]
     pose = make_calibration_pose(1)
     tran_0 = torch.tensor(
@@ -658,10 +658,10 @@ def main() -> None:
     #     ],
     #     dtype=torch.float32,
     # )
-    ori = ori @ R_fix
-    acc = acc @ R_fix
+    # ori = ori @ R_fix
+    # acc = acc @ R_fix
 
-    P_IM = ori[0, PELVIS_IDX]
+    # P_IM = ori[0, PELVIS_IDX]
     #     P_IM = torch.tensor(
     #     [
     #         [0, 0, 1],
@@ -685,38 +685,38 @@ def main() -> None:
     #     [ 0, -1,  0],
     #     [-1,  0,  0],
     # ], dtype=torch.float32)
-    print("P_IM:")
-    print(P_IM)
+    # print("P_IM:")
+    # print(P_IM)
 
-    print("Determinant:", torch.det(P_IM).item())
-    print("Orthogonality error:", torch.norm(P_IM.T @ P_IM - torch.eye(3)).item())
+    # print("Determinant:", torch.det(P_IM).item())
+    # print("Orthogonality error:", torch.norm(P_IM.T @ P_IM - torch.eye(3)).item())
 
-    R_I_offset, a_m = calibrate_rotations(ori, acc, global_rotations, P_IM)
+    # R_I_offset, a_m = calibrate_rotations(ori, acc, global_rotations, P_IM)
 
-    debug_calibration(
-        ori,
-        global_rotations,
-        tracked_joints,
-        R_I_offset,
-        P_IM,
-    )
-    print("a_m", a_m)
-    a_norm, R_norm = normalize_imu_data(ori, acc, R_I_offset, a_m, P_IM, PELVIS_IDX)
-    a_test = torch.zeros_like(a_norm)
-    x = normalize_and_concat(
-        a_norm[frame_start:frame_end], R_norm[frame_start:frame_end]
-    ).to(device)
-    pose, tran = net.forward_offline(x)
-    pose_vis = pose.clone()
-    tran_vis = tran.clone()
-    pose_vis[:, 0] = R_vis @ pose_vis[:, 0]
-    tran_vis = (R_vis @ tran_vis.unsqueeze(-1)).squeeze(-1)
-    art.ParametricModel(paths.smpl_file).view_motion([pose_vis], [tran_vis])
-    # Visualize calibration pose
-    # pose = make_calibration_pose(1000)
+    # debug_calibration(
+    #     ori,
+    #     global_rotations,
+    #     tracked_joints,
+    #     R_I_offset,
+    #     P_IM,
+    # )
+    # print("a_m", a_m)
+    # a_norm, R_norm = normalize_imu_data(ori, acc, R_I_offset, a_m, P_IM, PELVIS_IDX)
+    # a_test = torch.zeros_like(a_norm)
+    # x = normalize_and_concat(
+    #     a_norm[frame_start:frame_end], R_norm[frame_start:frame_end]
+    # ).to(device)
+    # pose, tran = net.forward_offline(x)
     # pose_vis = pose.clone()
+    # tran_vis = tran.clone()
     # pose_vis[:, 0] = R_vis @ pose_vis[:, 0]
-    # art.ParametricModel(paths.smpl_file).view_motion([pose_vis], [tran_0])
+    # tran_vis = (R_vis @ tran_vis.unsqueeze(-1)).squeeze(-1)
+    # art.ParametricModel(paths.smpl_file).view_motion([pose_vis], [tran_vis])
+    # Visualize calibration pose
+    pose = make_calibration_pose(1000)
+    pose_vis = pose.clone()
+    pose_vis[:, 0] = R_vis @ pose_vis[:, 0]
+    art.ParametricModel(paths.smpl_file).view_motion([pose_vis], [tran_0])
 
 
 if __name__ == "__main__":

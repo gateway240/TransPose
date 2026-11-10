@@ -20,26 +20,54 @@ import articulate as art
 # frame_end = 400
 # frame_end = -1
 
-motion = "walking"
-frame_start = 400
-frame_end = 1000
+# motion = "walking"
+# frame_start = 400
+# frame_end = 1000
+
+motion = "jogging"
+frame_start = 100
+frame_end = 1200
 
 # motion = "half_jacks"
 # frame_start = 0
 # frame_end = 400
 
+# motion = "curls"
+# frame_start = 0
+# frame_end = 1000
+
+# motion = "box_jabs"
+# frame_start = 0
+# frame_end = 1000
 # Person starting facing left (squats) or maybe all??
-R_fix = torch.tensor([
-    [ 0, -1, 0],
-    [ 1,  0, 0],
-    [ 0,  0, 1],
-], dtype=torch.float32)
+# R_fix = torch.tensor([
+#     [ 0, -1, 0],
+#     [ 1,  0, 0],
+#     [ 0,  0, 1],
+# ], dtype=torch.float32)
 # Person starting facing right(treadmill)
 # R_fix = torch.tensor([
 #     [0, 1, 0],
 #     [1, 0, 0],
 #     [0, 0,-1],
 # ], dtype=torch.float32)
+
+R_arm = torch.tensor([
+    [0, 1, 0],
+    [1, 0, 0],
+    [0, 0,1],
+], dtype=torch.float32)
+R_body = torch.tensor([
+    [ 0, -1, 0],
+    [ 1,  0, 0],
+    [ 0,  0, 1],
+], dtype=torch.float32)
+R_identity = torch.tensor([
+    [ 1, 0, 0],
+    [ 0,  1, 0],
+    [ 0,  0, 1],
+], dtype=torch.float32)
+
 
 PELVIS_IDX = 5
 CAL_FRAMES = 60  # 1 sec at 60 FPS
@@ -187,12 +215,12 @@ def make_calibration_pose(num_frames: int = 1) -> torch.Tensor:
     )
 
     left_elbow_bend = torch.tensor(
-        Rotation.from_euler("y", -10, degrees=True).as_matrix(),
+        Rotation.from_euler("xy", [-20,-10], degrees=True).as_matrix(),
         dtype=torch.float32,
     )
 
     right_elbow_bend = torch.tensor(
-        Rotation.from_euler("y", 10, degrees=True).as_matrix(),
+        Rotation.from_euler("xy", [-20,10], degrees=True).as_matrix(),
         dtype=torch.float32,
     )
 
@@ -236,7 +264,7 @@ print(ori_raw.shape)
 pose_cal = make_calibration_pose(1)[0]  # (24,3,3)
 R_bone_cal = pose_cal[tracked_joints]  # (6,3,3)
 candidates = generate_coordinate_frame_candidates()
-# for name, R_fix in candidates:
+# for name, R_var in candidates:
 #     print()
 #     print("=" * 80)
 #     print(name)
@@ -312,9 +340,21 @@ ori = torch.stack(
 
 # print("Heading correction:", torch.rad2deg(angle).item())
 # print("Correction matrix:", C_heading)
+R_var = R_body
+R_fix = torch.stack([
+    R_var,   # radius_l_imu
+    R_var,   # radius_r_imu
+    R_var,  # tibia_l_imu
+    R_var,  # tibia_r_imu
+    R_var,  # head_imu
+    R_var,  # pelvis_imu
+]).to(ori.device)
 
 ori = ori @ R_fix
-acc_raw = acc_raw @ R_fix
+acc_raw = torch.matmul(
+    acc_raw.unsqueeze(-2),
+    R_fix.unsqueeze(0)
+).squeeze(-2)
 
 # Calibration frame
 ori_cal = ori_raw[:CAL_FRAMES].mean(dim=0)

@@ -1,3 +1,5 @@
+from scipy.spatial.transform import Rotation
+from articulate import SMPLJoint
 import torch.nn
 from torch.nn.functional import relu
 from config import *
@@ -124,7 +126,38 @@ class TransPoseNet(torch.nn.Module):
         # calculate pose (local joint rotation matrices)
         root_rotation = imu[:, -9:].view(-1, 3, 3)
         pose = self._reduced_glb_6d_to_full_local_mat(root_rotation.cpu(), global_reduced_pose.cpu())
+        pose_offset = torch.eye(3).repeat(24, 1, 1)
 
+        # pose_offset[SMPLJoint.LSHOULDER] = torch.tensor(
+        #     Rotation.from_euler(
+        #         "z",
+        #         -75,
+        #         degrees=True,
+        #     ).as_matrix(),
+        #     dtype=torch.float32,
+        # )
+
+        # pose_offset[SMPLJoint.RSHOULDER] = torch.tensor(
+        #     Rotation.from_euler(
+        #         "z",
+        #         75,
+        #         degrees=True,
+        #     ).as_matrix(),
+        #     dtype=torch.float32,
+        # )
+        # left_elbow_bend = torch.tensor(
+        #     Rotation.from_euler("xy", [-20,-10], degrees=True).as_matrix(),
+        #     dtype=torch.float32,
+        # )
+
+        # right_elbow_bend = torch.tensor(
+        #     Rotation.from_euler("xy", [-20,10], degrees=True).as_matrix(),
+        #     dtype=torch.float32,
+        # )
+
+        # pose_offset[SMPLJoint.LELBOW] = left_elbow_bend
+        # pose_offset[SMPLJoint.RELBOW] = right_elbow_bend
+        # pose = pose @ pose_offset.unsqueeze(0)
         # calculate velocity (translation between two adjacent frames in 60fps in world space)
         j = art.math.forward_kinematics(pose[:, joint_set.lower_body],
                                         self.lower_body_bone.expand(pose.shape[0], -1, -1),
