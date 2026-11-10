@@ -7,3 +7,4 @@ data/dataset_work/
 data/weights.pt
 __pycache__/
 data/example
+out
