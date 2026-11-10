@@ -93,6 +93,72 @@ def generate_coordinate_frame_candidates():
     return candidates
 
 
+def compute_heading_correction(
+    ori,  # [frames, sensors, 3, 3]
+    base_sensor=5,  # Pelvis
+    base_heading_axis=(1.0, 0.0, 0.0),
+    desired_heading=(1.0, 0.0, 0.0),
+    up_axis=(0.0, 0.0, 1.0),
+):
+    """
+    Compute heading correction around Xsens global +Z.
+
+    Assumptions:
+      - ori maps sensor coordinates to Xsens global coordinates.
+      - Xsens frame is North-West-Up.
+      - Pelvis +X points forward.
+      - Desired heading is magnetic North (+X).
+    """
+
+    device = ori.device
+    dtype = ori.dtype
+
+    up = torch.tensor(up_axis, device=device, dtype=dtype)
+    up = up / torch.linalg.norm(up)
+
+    sensor_forward = torch.tensor(base_heading_axis, device=device, dtype=dtype)
+
+    target_forward = torch.tensor(desired_heading, device=device, dtype=dtype)
+
+    # First pelvis orientation.
+    R_base = ori[0, base_sensor]
+
+    # Pelvis forward direction expressed in global coordinates.
+    heading = R_base @ sensor_forward
+
+    # Project both directions onto the horizontal plane.
+    heading = heading - torch.dot(heading, up) * up
+    target_forward = target_forward - torch.dot(target_forward, up) * up
+
+    heading = heading / torch.linalg.norm(heading)
+    target_forward = target_forward / torch.linalg.norm(target_forward)
+
+    # Signed angle from measured heading to desired heading.
+    cross = torch.linalg.cross(heading, target_forward)
+
+    sin_angle = torch.dot(up, cross)
+    cos_angle = torch.dot(heading, target_forward)
+
+    angle = torch.atan2(sin_angle, cos_angle)
+
+    # Rotation around global vertical axis.
+    K = torch.tensor(
+        [
+            [0.0, -up[2], up[1]],
+            [up[2], 0.0, -up[0]],
+            [-up[1], up[0], 0.0],
+        ],
+        device=device,
+        dtype=dtype,
+    )
+
+    I = torch.eye(3, device=device, dtype=dtype)
+
+    C = I + torch.sin(angle) * K + (1 - torch.cos(angle)) * (K @ K)
+
+    return angle, C
+
+
 def make_calibration_pose(num_frames: int = 1) -> torch.Tensor:
     pose = torch.eye(3).repeat(num_frames, 24, 1, 1)
 
@@ -144,14 +210,15 @@ acc_raw = torch.load(os.path.join(paths.example_dir, f"{motion}_accelerations.pt
 print(acc_raw[0])
 print(acc_raw.shape)
 ori_raw = torch.load(os.path.join(paths.example_dir, f"{motion}_orientations.pt"))
-print(ori_raw[0])
-print(ori_raw.shape)
+
 acc_raw = acc_raw[frame_start:frame_end]
 ori_raw = ori_raw[frame_start:frame_end]
 
 num_frames = ori_raw.shape[0]
 
 
+print(ori_raw[0])
+print(ori_raw.shape)
 pose_cal = make_calibration_pose(1)[0]  # (24,3,3)
 R_bone_cal = pose_cal[tracked_joints]  # (6,3,3)
 candidates = generate_coordinate_frame_candidates()
@@ -161,7 +228,7 @@ candidates = generate_coordinate_frame_candidates()
 #     print(name)
 #     print("=" * 80)
 
-#
+
 # Apply candidate transform to experimental IMU data
 #
 # ori_test = ori @ R_fix
@@ -201,7 +268,11 @@ R_fix = torch.tensor(
     [[0, 1, 0], [0, 0, -1], [-1, 0, 0]],
     dtype=torch.float32,
 )
-
+# R_fix = torch.tensor([
+#     [ 0,  0, -1],
+#     [ 0, -1,  0],
+#     [-1,  0,  0],
+# ], dtype=torch.float32)
 # R_fix = torch.tensor(
 #     [[-1,  0,  0],
 #  [ 0,  0, -1],
@@ -215,9 +286,16 @@ ori = torch.stack(
     ],
     dim=0,
 )
-ori = ori @ R_fix
-acc_raw = acc_raw @ R_fix
+angle, C_heading = compute_heading_correction(
+    ori,
+    base_sensor=PELVIS_IDX,
+)
 
+print("Heading correction:", torch.rad2deg(angle).item())
+print("Correction matrix:", C_heading)
+
+ori =   ori @ R_fix
+acc_raw = acc_raw @ R_fix
 
 # Calibration frame
 ori_cal = ori_raw[:CAL_FRAMES].mean(dim=0)

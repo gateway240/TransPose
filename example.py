@@ -23,6 +23,7 @@ print(acc.shape)
 ori = torch.load(os.path.join(paths.example_dir, f'ori.pt'))
 print(ori[0])
 print(ori.shape)
+# acc = torch.zeros_like(acc)
 x = normalize_and_concat(acc, ori).to(device)
 pose, tran = net.forward_offline(x)     # offline
 R_vis = torch.tensor(
