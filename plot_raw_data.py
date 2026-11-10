@@ -43,6 +43,17 @@ LINE_STYLES = [
     (0, (3, 1, 1, 1)),   # pelvis_imu
 ]
 
+YAW_OFFSETS = torch.deg2rad(
+    torch.tensor([
+        -30.923927739673406,  # radius_l_imu
+        -44.63515206908284,   # radius_r_imu
+        -48.66927350618733,   # tibia_l_imu
+        -56.067362769802585,  # tibia_r_imu
+        -36.847138420633556,  # head_imu
+        -30.576712572777073,  # pelvis_imu
+    ], dtype=torch.float32)
+)
+
 def collect_motion_files(
     root_dir: Path,
 ) -> dict[str, dict[str, Path]]:
@@ -185,7 +196,6 @@ def plot_euler(
     fig.savefig(output_path)
     plt.close(fig)
 
-
 def _process_files(motion: str, modalities: dict[str,Path], output_dir: Path) -> dict[str | Hashable, Any]:
 
     # path = f
@@ -224,7 +234,17 @@ def _process_files(motion: str, modalities: dict[str,Path], output_dir: Path) ->
     )
 
     logger.info(euler.shape)
+    # print("before", euler[0, :, 2])
+    # euler[..., 2] += YAW_OFFSETS.to(
+    #     euler.device,
+    #     euler.dtype,
+    # )
 
+    # euler[..., 2] = (
+    #     (euler[..., 2] + torch.pi)
+    #     % (2 * torch.pi)
+    # ) - torch.pi
+    # print("after ", euler[0, :, 2])
     # logger.info(df_euler)
     # means, stds = df_euler.mean().to_numpy(), df_euler.std().to_numpy()
 
@@ -237,7 +257,7 @@ def _process_files(motion: str, modalities: dict[str,Path], output_dir: Path) ->
     # summary_dict = summary.iloc[0].to_dict()
 
     if PLOT_RESULTS:
-        output_file = output_dir / f"{motion}.png"
+        output_file = output_dir / f"{motion}.pdf"
         plot_euler(acc, euler, output_file)
 
     return {

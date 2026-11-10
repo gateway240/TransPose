@@ -15,9 +15,10 @@ from utils import normalize_and_concat
 import os
 import articulate as art
 
-# motion = 'squats_deep'
+# motion = "squats_deep"
 # frame_start = 0
 # frame_end = 400
+# frame_end = -1
 
 motion = "walking"
 frame_start = 400
@@ -26,6 +27,19 @@ frame_end = 1000
 # motion = "half_jacks"
 # frame_start = 0
 # frame_end = 400
+
+# Person starting facing left (squats) or maybe all??
+R_fix = torch.tensor([
+    [ 0, -1, 0],
+    [ 1,  0, 0],
+    [ 0,  0, 1],
+], dtype=torch.float32)
+# Person starting facing right(treadmill)
+# R_fix = torch.tensor([
+#     [0, 1, 0],
+#     [1, 0, 0],
+#     [0, 0,-1],
+# ], dtype=torch.float32)
 
 PELVIS_IDX = 5
 CAL_FRAMES = 60  # 1 sec at 60 FPS
@@ -264,10 +278,10 @@ candidates = generate_coordinate_frame_candidates()
 #     dtype=torch.float32,
 # )
 # Good for walking
-R_fix = torch.tensor(
-    [[0, 1, 0], [0, 0, -1], [-1, 0, 0]],
-    dtype=torch.float32,
-)
+# R_fix = torch.tensor(
+#     [[0, 1, 0], [0, 0, -1], [-1, 0, 0]],
+#     dtype=torch.float32,
+# )
 # R_fix = torch.tensor([
 #     [ 0,  0, -1],
 #     [ 0, -1,  0],
@@ -279,6 +293,11 @@ R_fix = torch.tensor(
 #  [ 0, -1,  0]],
 #     dtype=torch.float32,
 # )
+# R_fix = torch.tensor([
+#     [0, 1, 0],
+#     [1, 0, 0],
+#     [0, 0,-1],
+# ], dtype=torch.float32)
 ori = torch.stack(
     [
         quaternion_to_rotation_matrix(ori_raw[i])  # (6, 4) -> (6, 3, 3)
@@ -286,15 +305,15 @@ ori = torch.stack(
     ],
     dim=0,
 )
-angle, C_heading = compute_heading_correction(
-    ori,
-    base_sensor=PELVIS_IDX,
-)
+# angle, C_heading = compute_heading_correction(
+#     ori,
+#     base_sensor=PELVIS_IDX,
+# )
 
-print("Heading correction:", torch.rad2deg(angle).item())
-print("Correction matrix:", C_heading)
+# print("Heading correction:", torch.rad2deg(angle).item())
+# print("Correction matrix:", C_heading)
 
-ori =   ori @ R_fix
+ori = ori @ R_fix
 acc_raw = acc_raw @ R_fix
 
 # Calibration frame
@@ -314,7 +333,9 @@ print(device2bone.shape)
 print(acc_offsets.shape)
 
 acc_in = (smpl2imu.matmul(acc_raw.unsqueeze(-1)) - acc_offsets.unsqueeze(0)).squeeze(-1)
+# torch.save(acc_in.cpu(),os.path.join(paths.example_dir, f"{motion}_cal_accelerations.pt"))
 ori_in = smpl2imu.matmul(ori).matmul(device2bone)
+# torch.save(ori_in.cpu(),os.path.join(paths.example_dir, f"{motion}_cal_orientations.pt"))
 # acc_in = torch.zeros_like(acc_raw)
 x = normalize_and_concat(acc_in, ori_in).to(device)
 pose, tran = net.forward_offline(x)  # offline
